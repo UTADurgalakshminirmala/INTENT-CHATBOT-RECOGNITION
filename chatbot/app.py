@@ -3,9 +3,17 @@ from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
-# Load the intent data from intent.json
+# Load the intent data from Intent.json
 with open('./Intent.json', 'r') as file:
     intents = json.load(file)
+
+def find_best_intent(user_question):
+    user_question = user_question.lower()  # Convert input to lowercase
+    for intent in intents['intents']:
+        for pattern in intent['patterns']:
+            if pattern.lower() in user_question:  # Case-insensitive substring match
+                return intent['intent_tag'], intent['responses'][0]  # Return first response
+    return None, "I'm sorry, I couldn't understand your question."
 
 @app.route('/')
 def home():
@@ -13,17 +21,10 @@ def home():
 
 @app.route('/get_intent', methods=['POST'])
 def get_intent():
-    user_question = request.json.get('user_question')
+    user_question = request.json.get('user_question', "")
 
-    # Initialize variables for tag and response
-    intent_tag = None
-    response = "I'm sorry, I couldn't understand your question."
-
-    # Loop through the intents to find a match
-    for intent in intents['intents']:
-        if user_question in intent['patterns']:
-            intent_tag = intent['intent_tag']
-            response = intent['responses'][0]  # Use the first response
+    # Find the matching intent
+    intent_tag, response = find_best_intent(user_question)
 
     return jsonify({
         "intent_tag": intent_tag,
